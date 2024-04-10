@@ -79,57 +79,59 @@ public class BodyPart : MonoBehaviour
         float startingDownAngle = Vector3.Angle((downwards - transform.position).normalized, (jointAPos - transform.position).normalized);
 
         // Calculating the target X rotation based on the rotation of this object at the start.
-        if ((Mathf.Approximately(startingDownAngle, 180) && Mathf.Approximately(startingForwardAngle, 90)))
+        if ((Mathf.Approximately(startingDownAngle % 90, 0) && Mathf.Approximately(startingForwardAngle % 90, 0))
+            || (Mathf.Approximately(startingDownAngle % 90, 0) || Mathf.Approximately(startingForwardAngle % 90, 0)))
         {
             initXRotation = 0;
-            targetXAngle = startingDownAngle;
+            targetXAngle = startingForwardAngle;
         }
-        else if (Mathf.Approximately(startingDownAngle, 90))
+        else if (!Mathf.Approximately(startingDownAngle % 90, 0))
         {
-            initXRotation = 0;
-            targetXAngle = startingDownAngle;
-        }
-        else if (!Mathf.Approximately(startingDownAngle, 90))
-        {
-            initXRotation = -(90 - startingDownAngle);
+            initXRotation = calculateAxisRotation(left, downwards, 90);
             targetXAngle = 90.0f;
         }
 
         // Calculating the target Y rotation based on the rotation of this object at the start.
-        if ((Mathf.Approximately(startingForwardAngle, 180) && Mathf.Approximately(startingLeftAngle, 90)))
+        if ((Mathf.Approximately(startingForwardAngle % 90, 0) && Mathf.Approximately(startingLeftAngle % 90, 0))
+            || (Mathf.Approximately(startingForwardAngle % 90, 0) || Mathf.Approximately(startingLeftAngle % 90, 0)))
         {
             initYRotation = 0;
-            targetYAngle = startingLeftAngle;
+            targetXAngle = startingLeftAngle;
         }
-        else if(Mathf.Approximately(startingForwardAngle, 90))
+        else if(!Mathf.Approximately(startingForwardAngle, 90.0f))
         {
-            initYRotation = 0;
-            targetYAngle = startingForwardAngle;
-        }
-        else if(!Mathf.Approximately(startingForwardAngle, 90))
-        {
-            initYRotation = -(90 - startingForwardAngle);
+            initYRotation = calculateAxisRotation(upwards, forward, 90, true);
             targetYAngle = 90.0f;
         }
 
         // Calculating the target Z rotation based on the rotation of this object at the start.
-        if ((Mathf.Approximately(startingDownAngle % 90, 0) && Mathf.Approximately(startingLeftAngle % 90, 0)))
+        if ((Mathf.Approximately(startingDownAngle % 90, 0) && Mathf.Approximately(startingLeftAngle % 90, 0))
+            || (Mathf.Approximately(startingDownAngle % 90, 0) || Mathf.Approximately(startingLeftAngle % 90, 0)))
         {
             initZRotation = 0;
             targetZAngle = startingLeftAngle;
         }
         else if (!Mathf.Approximately(startingDownAngle, 90))
         {
-            initZRotation = -(90 - startingDownAngle);
+            initZRotation = calculateAxisRotation(forward, left, 90);
             targetZAngle = 90.0f;
         }
 
-        Debug.Log("Down: " + startingDownAngle);
-        Debug.Log("Forward: " + startingForwardAngle);
-        Debug.Log("Left: " + startingLeftAngle);
+        //Debug.Log("Down: " + startingDownAngle);
+        //Debug.Log("Forward: " + startingForwardAngle);
+        //Debug.Log("Left: " + startingLeftAngle);
         Debug.Log("Target Angles: " + targetXAngle + ", " + targetYAngle + ", " + targetZAngle);
 
-        transform.rotation *= Quaternion.Euler(initXRotation, initYRotation, initZRotation);
+       // Debug.Log("Init Target Rotations: " + initXRotation + ", " + initYRotation + ", " + initZRotation);
+
+        Quaternion xRot = Quaternion.AngleAxis(initXRotation, transform.right);
+        Quaternion yRot = Quaternion.AngleAxis(initYRotation, transform.up);
+        Quaternion zRot = Quaternion.AngleAxis(initZRotation, transform.forward);
+        //Debug.Log("Init Quaternion Rotations: " + xRot.eulerAngles + " " + yRot.eulerAngles + " " + zRot.eulerAngles);
+
+        Quaternion finalInitRot = (xRot * yRot * zRot);
+        //Debug.Log("Final Init Rotation: " + finalInitRot.eulerAngles);
+        transform.rotation *= finalInitRot;
     }
 
     private void FixedUpdate()
@@ -161,10 +163,14 @@ public class BodyPart : MonoBehaviour
         float targetZRotation = calculateAxisRotation(forward, left, targetZAngle);
         Debug.Log("Target Rotations: " + targetXRotation + ", " + targetYRotation + ", " + targetZRotation);
 
-        //TODO: Rotate one at a time using coroutines? 
-        transform.Rotate(new Vector3(targetXRotation, transform.rotation.eulerAngles.y, transform.rotation.eulerAngles.z));
-        transform.Rotate(new Vector3(transform.rotation.eulerAngles.x, targetYRotation, transform.rotation.eulerAngles.z));
-        transform.Rotate(new Vector3(transform.rotation.eulerAngles.x, transform.rotation.eulerAngles.y, targetZRotation));
+        Quaternion xRot = Quaternion.AngleAxis(targetXRotation, transform.right);
+        Quaternion yRot = Quaternion.AngleAxis(targetYRotation, transform.up);
+        Quaternion zRot = Quaternion.AngleAxis(targetZRotation, transform.forward);
+        Debug.Log("Quaternion Rotations: " + xRot.eulerAngles + " " + yRot.eulerAngles + " " + zRot.eulerAngles);
+
+        Quaternion finalRot = xRot * yRot * zRot;
+        Debug.Log("Final Rotation: " + finalRot.eulerAngles);
+        transform.rotation *= yRot;
     }
 
     private float calculateAxisRotation(Vector3 axis, Vector3 forward, float targetAngle, bool debug = false)
